@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>銅建値</title>
+<meta name="description" content="JX金属が公表する電気銅建値を表示し、改定時に通知します">
+<meta name="theme-color" content="#a8582c" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b1613" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="銅建値">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --bg:#f6f1ec; --card:#ffffff; --ink:#1f1a17; --sub:#6b625b; --faint:#a39890; --line:#ebe3dc;
+  --cu:#a8582c; --cu2:#c8763f; --cu-soft:#f6e7dc;
+  --up:#d03b2f; --up-soft:#fde8e6; --down:#2563c9; --down-soft:#e5eefc;
+  --hero-ink:#fff8f2;
+  --shadow:0 1px 2px rgba(60,30,10,.06),0 6px 24px rgba(60,30,10,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14110f; --card:#1f1a17; --ink:#f3ece6; --sub:#b3a69c; --faint:#7d7068; --line:#332a24;
+    --cu:#d38551; --cu2:#e39a68; --cu-soft:#3a2619;
+    --up:#ff7a6e; --up-soft:#3d1d1a; --down:#7aa7ff; --down-soft:#1a2740;
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;
+  font-feature-settings:"palt"; line-height:1.5;
+  padding-bottom:calc(24px + env(safe-area-inset-bottom));
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+a{color:var(--cu)}
+
+/* ---------- 上部（最新の建値） ---------- */
+.hero{
+  background:linear-gradient(160deg,#c8763f 0%,#a8582c 55%,#86421f 100%);
+  color:var(--hero-ink);
+  padding:calc(14px + env(safe-area-inset-top)) 20px 26px;
+  border-radius:0 0 26px 26px;
+}
+@media (prefers-color-scheme: dark){ .hero{background:linear-gradient(160deg,#7a3f1f 0%,#5c2e16 60%,#3f1f0f 100%)} }
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.brand{font-size:13px;font-weight:600;letter-spacing:.04em;opacity:.92}
+.brand small{font-weight:400;opacity:.8;margin-left:6px}
+.refresh{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.14)}
+.refresh svg{width:19px;height:19px}
+.refresh.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.date-line{display:flex;align-items:center;gap:8px;font-size:14px;opacity:.95;min-height:24px}
+.badge{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:#fff;color:#b8321f;letter-spacing:.04em}
+.price{display:flex;align-items:baseline;gap:6px;margin-top:4px;flex-wrap:wrap}
+.price b{font-size:clamp(40px,12.5vw,56px);font-weight:700;letter-spacing:-.01em;line-height:1.1}
+.price span{font-size:17px;opacity:.9}
+.sub{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap}
+.kg{font-size:17px;opacity:.95}
+.chip{font-size:14.5px;font-weight:700;padding:5px 11px;border-radius:999px;background:#fff;white-space:nowrap}
+.chip.up{color:#c4321f}.chip.down{color:#1f57b8}.chip.flat{color:#6b625b}
+
+/* ---------- カード ---------- */
+main{padding:0 16px;max-width:560px;margin:0 auto}
+.card{background:var(--card);border-radius:18px;box-shadow:var(--shadow);margin-top:16px;padding:16px 16px 14px;border:1px solid var(--line)}
+@media (prefers-color-scheme: light){.card{border-color:transparent}}
+.card h2{font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card h2 small{font-size:12px;font-weight:400;color:var(--sub)}
+.msg{font-size:13.5px;color:var(--sub);margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--cu-soft)}
+.msg.err{background:var(--up-soft);color:var(--up)}
+
+/* グラフ */
+.seg{display:inline-flex;background:var(--bg);border-radius:10px;padding:3px;gap:2px}
+.seg button{font-size:12.5px;padding:5px 10px;border-radius:8px;color:var(--sub)}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.chartwrap{position:relative;margin-top:10px;touch-action:pan-y}
+.chartwrap svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:absolute;top:0;transform:translateX(-50%);background:var(--ink);color:var(--card);font-size:12px;padding:4px 8px;border-radius:8px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s}
+.tip.on{opacity:1}
+.range{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);margin-top:6px}
+
+/* 履歴 */
+.list{list-style:none;margin-top:8px}
+.list li{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:11px 2px;border-top:1px solid var(--line);font-size:15px}
+.list li:first-child{border-top:0}
+.list .d{color:var(--sub);font-size:14px}
+.list .p{font-weight:600;text-align:right}
+.list .df{font-size:13px;min-width:78px;text-align:right;font-weight:600}
+.up-t{color:var(--up)}.down-t{color:var(--down)}.flat-t{color:var(--faint)}
+.more{display:block;width:100%;margin-top:6px;padding:10px;border-radius:12px;background:var(--bg);font-size:13.5px;color:var(--sub)}
+
+/* 通知・ホーム画面 */
+.steps{list-style:none;margin-top:10px;counter-reset:s}
+.steps li{position:relative;padding:8px 0 8px 34px;font-size:14px;color:var(--ink)}
+.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:8px;width:24px;height:24px;border-radius:50%;background:var(--cu-soft);color:var(--cu);font-weight:700;font-size:13px;display:grid;place-items:center}
+.stores{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;background:var(--cu);color:#fff;min-height:44px}
+.btn.ghost{background:var(--cu-soft);color:var(--cu)}
+.topic{display:flex;align-items:center;gap:8px;margin-top:8px;background:var(--bg);border-radius:12px;padding:6px 6px 6px 12px}
+.topic code{flex:1;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14.5px;overflow-wrap:anywhere}
+.note{font-size:12.5px;color:var(--sub);margin-top:8px}
+.hidden{display:none!important}
+.close{font-size:20px;line-height:1;color:var(--faint);width:32px;height:32px}
+
+footer{max-width:560px;margin:18px auto 0;padding:0 20px;font-size:12px;color:var(--faint);line-height:1.7}
+footer a{color:var(--sub)}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="bar">
+    <div class="brand">電気銅建値<small>JX金属 公表</small></div>
+    <button class="refresh" id="refresh" aria-label="最新の情報を読み込む">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+    </button>
+  </div>
+  <div class="date-line"><span id="date">読み込み中…</span><span class="badge hidden" id="today">本日改定</span></div>
+  <div class="price num"><b id="price">—</b><span>円/t</span></div>
+  <div class="sub">
+    <div class="kg num" id="kg">&nbsp;</div>
+    <div class="chip num flat hidden" id="diff"></div>
+  </div>
+</header>
+
+<main>
+  <div class="msg hidden" id="msg"></div>
+
+  <section class="card" aria-labelledby="h-chart">
+    <h2 id="h-chart">推移 <span class="seg" role="group" aria-label="期間">
+      <button data-n="15" aria-pressed="false">15回</button><button data-n="30" aria-pressed="true">30回</button><button data-n="0" aria-pressed="false">全部</button>
+    </span></h2>
+    <div class="chartwrap" id="chartwrap"><svg id="chart" viewBox="0 0 340 190" role="img" aria-label="建値の推移グラフ"></svg><div class="tip num" id="tip"></div></div>
+    <div class="range num" id="range"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-hist">
+    <h2 id="h-hist">改定の履歴 <small>円/t</small></h2>
+    <ul class="list num" id="list"></ul>
+    <button class="more hidden" id="more">もっと見る</button>
+  </section>
+
+  <section class="card" id="install" aria-labelledby="h-install">
+    <h2 id="h-install">ホーム画面に追加 <button class="close" id="install-close" aria-label="閉じる">×</button></h2>
+    <ol class="steps" id="install-ios">
+      <li>Safari の下にある <b>共有ボタン</b>（□に↑）をタップ</li>
+      <li><b>「ホーム画面に追加」</b>を選んで「追加」</li>
+    </ol>
+    <ol class="steps hidden" id="install-android">
+      <li>Chrome の右上の <b>︙</b> をタップ</li>
+      <li><b>「ホーム画面に追加」</b>または「アプリをインストール」</li>
+    </ol>
+    <p class="note">アプリと同じように、アイコンから開けるようになります。</p>
+  </section>
+
+  <section class="card" aria-labelledby="h-notify">
+    <h2 id="h-notify">改定の通知を受け取る</h2>
+    <ol class="steps">
+      <li>無料の通知アプリ <b>ntfy</b> を入れる
+        <div class="stores">
+          <a class="btn ghost" id="store-ios" href="https://apps.apple.com/jp/app/ntfy/id1625396347" target="_blank" rel="noopener">App Store</a>
+          <a class="btn ghost" id="store-android" href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Google Play</a>
+        </div>
+      </li>
+      <li>ntfy を開いて <b>＋</b> をタップし、次のトピック名を入れて購読
+        <div class="topic"><code id="topic">—</code><button class="btn" id="copy">コピー</button></div>
+        <div class="stores hidden" id="deeplink-wrap"><a class="btn ghost" id="deeplink" href="#">ntfy で直接登録（Android）</a></div>
+      </li>
+      <li id="ios-allow">iPhone は通知の許可を求められたら「許可」</li>
+    </ol>
+    <p class="note">建値が改定されると、新しい建値と前回比が届きます。通知をタップするとこの画面が開きます。</p>
+  </section>
+</main>
+
+<footer>
+  JX金属のページを平日30分ごとに確認しています。<span id="updated"></span><br>
+  出典：<a href="https://www.jx-nmm.com/cuprice/" target="_blank" rel="noopener">JX金属株式会社「銅建値」</a>
+</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const fmt = n => n.toLocaleString("ja-JP");
+  const WD = "日月火水木金土";
+  const store = {
+    get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v){ try { localStorage.setItem(k, v); } catch {} }
+  };
+  const parseDate = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const todayStr = () => { const t = new Date(Date.now() + 9 * 3600e3); return t.toISOString().slice(0, 10); };
+
+  let hist = [], span = Number(store.get("span") || 30), shown = 12;
+
+  // ---------- 読み込み ----------
+  async function getJSON(url){
+    const r = await fetch(url + "?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+  async function load(manual){
+    $("refresh").classList.add("spin");
+    try {
+      const data = await getJSON("data.json");
+      hist = (data.history || []).filter(r => r && r.date && r.price);
+      if (!hist.length) throw new Error("empty");
+      store.set("cache", JSON.stringify(data));
+      render(data);
+      hideMsg();
+    } catch (e) {
+      const c = store.get("cache");
+      if (c) {
+        try { const d = JSON.parse(c); hist = d.history; render(d); } catch {}
+        showMsg("インターネットに接続できないため、前回読み込んだ建値を表示しています。", false);
+      } else {
+        showMsg("建値を読み込めませんでした。電波の良い場所で ↻ を押してください。", true);
+      }
+    } finally {
+      setTimeout(() => $("refresh").classList.remove("spin"), 300);
+    }
+  }
+  function showMsg(t, err){ const m = $("msg"); m.textContent = t; m.classList.toggle("err", !!err); m.classList.remove("hidden"); }
+  function hideMsg(){ $("msg").classList.add("hidden"); }
+
+  // ---------- 表示 ----------
+  function render(data){
+    const last = hist[hist.length - 1], prev = hist[hist.length - 2];
+    const d = parseDate(last.date);
+    $("date").textContent = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${WD[d.getDay()]}）改定`;
+    $("today").classList.toggle("hidden", last.date !== todayStr());
+    $("price").textContent = fmt(last.price);
+    $("kg").textContent = `${fmt(Math.round(last.price / 1000))} 円/kg`;
+    const chip = $("diff");
+    if (prev) {
+      const df = last.price - prev.price;
+      chip.className = "chip num " + (df > 0 ? "up" : df < 0 ? "down" : "flat");
+      chip.textContent = "前回比 " + (df > 0 ? "▲" : df < 0 ? "▼" : "±") + fmt(Math.abs(df)) + "円";
+    } else chip.classList.add("hidden");
+    if (data.updatedAt) {
+      const u = new Date(data.updatedAt);
+      if (!isNaN(u)) $("updated").textContent = `最終更新 ${u.getMonth() + 1}/${u.getDate()} ${String(u.getHours()).padStart(2, "0")}:${String(u.getMinutes()).padStart(2, "0")}`;
+    }
+    document.title = `銅建値 ${fmt(last.price)}円/t`;
+    drawChart();
+    drawList();
+  }
+
+  function drawList(){
+    const ul = $("list"); ul.textContent = "";
+    const rows = hist.slice().reverse();
+    rows.slice(0, shown).forEach((r, i) => {
+      const before = rows[i + 1];
+      const d = parseDate(r.date);
+      const li = document.createElement("li");
+      const a = document.createElement("span"); a.className = "d";
+      a.textContent = `${d.getFullYear() !== new Date().getFullYear() ? d.getFullYear() + "年" : ""}${d.getMonth() + 1}月${d.getDate()}日（${WD[d.getDay()]}）`;
+      const p = document.createElement("span"); p.className = "p"; p.textContent = fmt(r.price);
+      const f = document.createElement("span");
+      if (before) {
+        const df = r.price - before.price;
+        f.className = "df " + (df > 0 ? "up-t" : df < 0 ? "down-t" : "flat-t");
+        f.textContent = (df > 0 ? "▲" : df < 0 ? "▼" : "±") + fmt(Math.abs(df));
+      } else f.className = "df";
+      li.append(a, p, f); ul.append(li);
+    });
+    $("more").classList.toggle("hidden", shown >= rows.length);
+  }
+  $("more").addEventListener("click", () => { shown += 20; drawList(); });
+
+  // ---------- グラフ ----------
+  let pts = [];
+  function drawChart(){
+    const svg = $("chart");
+    const data = span ? hist.slice(-span) : hist.slice();
+    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.n) === span)));
+    const W = 340, H = 190, L = 44, R = 8, T = 30, B = 22;
+    const kg = data.map(r => r.price / 1000);
+    let lo = Math.min(...kg), hi = Math.max(...kg);
+    const pad = Math.max((hi - lo) * 0.12, 10);
+    const step = niceStep((hi - lo + 2 * pad) / 4);
+    lo = Math.floor((lo - pad) / step) * step; hi = Math.ceil((hi + pad) / step) * step;
+    const t0 = parseDate(data[0].date).getTime(), t1 = parseDate(data[data.length - 1].date).getTime();
+    const x = t => L + (t1 === t0 ? (W - L - R) / 2 : (t - t0) / (t1 - t0) * (W - L - R));
+    const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+    pts = data.map((r, i) => ({ x: x(parseDate(r.date).getTime()), y: y(kg[i]), r }));
+    const cs = getComputedStyle(document.documentElement);
+    const c = n => cs.getPropertyValue(n).trim();
+    let s = "";
+    for (let v = lo; v <= hi + 1e-9; v += step) {
+      s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${c("--line")}" stroke-width="1"/>`;
+      s += `<text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="10.5" fill="${c("--faint")}">${fmt(v)}</text>`;
+    }
+    s += `<text x="${L - 6}" y="${T - 14}" text-anchor="end" font-size="10.5" fill="${c("--faint")}">円/kg</text>`;
+    const line = pts.map((p, i) => (i ? "L" : "M") + p.x.toFixed(1) + " " + p.y.toFixed(1)).join("");
+    const area = line + `L${pts[pts.length - 1].x.toFixed(1)} ${H - B}L${pts[0].x.toFixed(1)} ${H - B}Z`;
+    s += `<defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${c("--cu")}" stop-opacity=".22"/><stop offset="1" stop-color="${c("--cu")}" stop-opacity="0"/></linearGradient></defs>`;
+    s += `<path d="${area}" fill="url(#g)"/>`;
+    s += `<path d="${line}" fill="none" stroke="${c("--cu")}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const lp = pts[pts.length - 1];
+    s += `<circle cx="${lp.x}" cy="${lp.y}" r="4.5" fill="${c("--cu")}" stroke="${c("--card")}" stroke-width="2"/>`;
+    s += `<line id="cur" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="${c("--sub")}" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>`;
+    s += `<circle id="dot" r="5" fill="${c("--card")}" stroke="${c("--cu")}" stroke-width="2.4" opacity="0"/>`;
+    svg.innerHTML = s;
+    const f = r => { const d = parseDate(r.date); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; };
+    $("range").textContent = "";
+    const a = document.createElement("span"); a.textContent = f(data[0]);
+    const b = document.createElement("span"); b.textContent = f(data[data.length - 1]);
+    $("range").append(a, b);
+  }
+  function niceStep(raw){
+    const p = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+  }
+  function pointAt(clientX){
+    const svg = $("chart"), box = svg.getBoundingClientRect();
+    const vx = (clientX - box.left) / box.width * 340;
+    let best = pts[0];
+    for (const p of pts) if (Math.abs(p.x - vx) < Math.abs(best.x - vx)) best = p;
+    const dot = $("dot"), cur = $("cur"), tip = $("tip");
+    dot.setAttribute("cx", best.x); dot.setAttribute("cy", best.y); dot.setAttribute("opacity", 1);
+    cur.setAttribute("x1", best.x); cur.setAttribute("x2", best.x); cur.setAttribute("opacity", .6);
+    const d = parseDate(best.r.date);
+    tip.textContent = `${d.getMonth() + 1}/${d.getDate()}　${fmt(best.r.price)}円/t`;
+    const px = best.x / 340 * box.width;
+    tip.style.left = Math.min(Math.max(px, 70), box.width - 70) + "px";
+    tip.classList.add("on");
+  }
+  function clearPoint(){
+    $("tip").classList.remove("on");
+    const d = $("dot"), c = $("cur"); if (d) d.setAttribute("opacity", 0); if (c) c.setAttribute("opacity", 0);
+  }
+  const cw = $("chartwrap");
+  cw.addEventListener("pointerdown", e => pointAt(e.clientX));
+  cw.addEventListener("pointermove", e => { if (e.pointerType === "mouse" || e.buttons) pointAt(e.clientX); });
+  cw.addEventListener("pointerleave", clearPoint);
+  cw.addEventListener("pointerup", e => { if (e.pointerType !== "mouse") setTimeout(clearPoint, 1800); });
+  document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
+    span = Number(b.dataset.n); store.set("span", String(span)); clearPoint(); if (hist.length) drawChart();
+  }));
+  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => hist.length && drawChart());
+
+  // ---------- 通知・ホーム画面 ----------
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if (standalone || store.get("installHidden") === "1") $("install").classList.add("hidden");
+  if (isAndroid) { $("install-ios").classList.add("hidden"); $("install-android").classList.remove("hidden"); $("store-ios").classList.add("hidden"); }
+  if (isIOS) $("store-android").classList.add("hidden");
+  if (isAndroid) $("ios-allow").classList.add("hidden");
+  $("install-close").addEventListener("click", () => { $("install").classList.add("hidden"); store.set("installHidden", "1"); });
+
+  getJSON("config.json").then(cfg => {
+    const topic = cfg.ntfyTopic || "";
+    const host = (cfg.ntfyServer || "https://ntfy.sh").replace(/^https?:\/\//, "");
+    $("topic").textContent = topic || "（未設定）";
+    if (topic && isAndroid) {
+      $("deeplink").href = `ntfy://${host}/${topic}?display=${encodeURIComponent("銅建値")}`;
+      $("deeplink-wrap").classList.remove("hidden");
+    }
+  }).catch(() => {});
+  $("copy").addEventListener("click", async () => {
+    const t = $("topic").textContent;
+    try { await navigator.clipboard.writeText(t); }
+    catch {
+      const r = document.createRange(); r.selectNodeContents($("topic"));
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      try { document.execCommand("copy"); } catch {}
+    }
+    $("copy").textContent = "コピー済み"; setTimeout(() => $("copy").textContent = "コピー", 1800);
+  });
+
+  // ---------- 更新 ----------
+  $("refresh").addEventListener("click", () => load(true));
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
+  setInterval(() => { if (document.visibilityState === "visible") load(); }, 10 * 60e3);
+  try { const c = store.get("cache"); if (c) { const d = JSON.parse(c); hist = d.history || []; if (hist.length) render(d); } } catch {}
+  load();
+
+  if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "銅建値（JX金属 電気銅）",
+  "short_name": "銅建値",
+  "description": "JX金属が公表する電気銅建値を表示します",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f1ec",
+  "theme_color": "#a8582c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
